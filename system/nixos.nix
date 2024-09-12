@@ -8,7 +8,6 @@ let
   configuration = import ../module/configuration.nix;
   hardware-configuration = import ../module/hardware-configuration.nix;
   home-manager = import ../module/home-manager.nix;
-  # pkgs = inputs.nixpkgs.legacyPackages.${system};
   unstable = import <nix-unstable> { config = { allowUnfree = true; }; };
 in
   inputs.nixpkgs.lib.nixosSystem {
@@ -19,16 +18,19 @@ in
       configuration
 
       {
-        boot.loader = {
-          efi  = {
-            canTouchEfiVariables = true;
+        boot = {
+          loader = {
+            efi  = {
+              canTouchEfiVariables = true;
+            };
+            grub = {
+              efiSupport = true;
+              enable = true;
+              device = "nodev";
+              useOSProber = true;
+            };
           };
-          grub = {
-            efiSupport = true;
-            enable = true;
-            device = "nodev";
-            useOSProber = true;
-          };
+          plymouth.enable = true;
         };
 
         nixpkgs.config.allowUnfree = true;
@@ -59,6 +61,7 @@ in
           openssh.enable = true;
           openssh.settings.PasswordAuthentication = false;
           openssh.settings.PermitRootLogin = "no";
+          displayManager.sddm.enable = true;
           xserver = {
             enable = true;
             xkb = {
@@ -66,10 +69,21 @@ in
               variant = "";
             };
             desktopManager.plasma5.enable = true;
-            windowManager.bspwm.enable = true;
+            windowManager = {
+              bspwm.enable = true;
+              session = [
+              { 
+                manage = "window";
+                name = "herbstluftwm";
+                start = ''
+                  ${pkgs.herbstluftwm}/bin/herbstluftwm --locked --autostart /home/sushi/.config/herbsluftwm/autostart &
+                  waitPID=$!
+                  '';
+              }
+              ];
+            };
             videoDrivers = ["nvidia"];
           };
-          displayManager.sddm.enable = true;
           udev.extraRules = "";
           gvfs.enable = true;
         };
@@ -79,7 +93,7 @@ in
         };
 
         users.users."${username}" = {
-          extraGroups = ["networkmanager" "wheel" "disk" "storage" "video"];
+          extraGroups = ["networkmanager" "wheel" "disk" "storage" "video" "libvirtd"];
           home = "/home/${username}";
           isNormalUser = true;
           password = password;
@@ -106,6 +120,8 @@ in
           bspwm
           bat
           clang
+          devenv
+          unstable.delta
           dmenu-rs
           eza
           fd
@@ -118,15 +134,16 @@ in
           jq
           pcmanfm
           mpv
+          unstable.neovim
           cinnamon.nemo
           nitrogen
           openssl
-          unstable.neovim
           polybar
           polkit
           polkit_gnome
           ripgrep
           sxhkd
+          steam-run
           unzip
           udisks2
           udiskie
@@ -138,6 +155,7 @@ in
           xclip
           xfce.thunar
           xfce.thunar-volman
+          yazi
           zip
           zoxide
           zed-editor
@@ -148,19 +166,23 @@ in
           nodejs_20
           unstable.pnpm
           python3
-          odin
           zig
-          erlang_27
-          unstable.elixir_1_17
-          unstable.gleam
-          vala
-          unstable.bun
-          lua
-          ghc
-          devenv
           #WARN: Remove this after
           stripe-cli
         ];
+        environment.sessionVariables = rec {
+          XDG_CACHE_HOME = "\${HOME}/.cache";
+          XDG_CONFIG_HOME = "\${HOME}/.config";
+          XDG_BIN_HOME = "\${HOME}/.local/bin";
+          XDG_DATA_HOME = "\${HOME}/.local/share";
+          TERMINAL="alacritty";
+
+          PATH = [
+            "\${HOME}/.bin"
+              "\${XDG_BIN_HOME}"
+              "\${HOME}/.node_modules"
+          ];
+        };
 
         systemd = {
           user.services.polkit-gnome-authentication-agent-1 = {
@@ -177,6 +199,9 @@ in
             };
           };
         };
+        # virtualisation stuff
+        virtualisation.libvirtd.enable = true;
+        programs.virt-manager.enable = true;
       }
 
       inputs.home-manager.nixosModules.home-manager

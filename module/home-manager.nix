@@ -8,6 +8,15 @@
     shutter
     cider
     tmux
+
+    # virtualization
+    qemu
+    virt-manager
+
+    # for herbsluftwm
+    lemonbar
+    # siji
+    # conky
   ];
   home.stateVersion = "24.05";
 }
